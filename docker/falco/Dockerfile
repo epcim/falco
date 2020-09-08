@@ -105,6 +105,17 @@ RUN curl -L -o binutils_2.30-22_amd64.deb https://dl.bintray.com/falcosecurity/d
 
 COPY ./docker-entrypoint.sh /
 
+ENV FALCO_VERSION='0.25.0'
+RUN cp -a /etc/falco /etc/falco-upstream;\
+    for f in falco_rules.yaml k8s_audit_rules.yaml falco_rules.local.yaml; do\
+      curl -qsSL --retry 3 --retry-delay 0 https://raw.githubusercontent.com/falcosecurity/falco/$FALCO_VERSION/rules/$f > /etc/falco-upstream/$f;\
+    done
+RUN sed -i -e 's,container.id=%[_.a-z0-9]*,\%container.info,' /etc/falco-upstream/falco_rules.yaml &&\
+    sed -i -e 's,container=%container.info,%container.info,g' /etc/falco-upstream/falco_rules.yaml &&\
+    sed -i -e 's,%container.info\s*%container.info,\%container.info,g' /etc/falco-upstream/falco_rules.yaml
+
+
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
 CMD ["/usr/bin/falco"]
+# vim: syntax=dockerfile
